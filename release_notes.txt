@@ -1,0 +1,12 @@
+Patch 1.1.52 - 25-12-2024 - week 52 - year 2024 - релиз 1.1
+-------------------------------------------------------------------------------------------------------
+
+1.1.52.1. New features
+
+1.1.52.1.1. Metrics data is now represented as JSON array
+1.1.52.1.2. Epoch timestamps have been added to alert and metrics parts of a JSON payload
+
+1.1.52.2. Corrections
+
+1.1.52.2.1. Trailing and leading zeroes are removed from JSON fields
+1.1.52.2.2. UTC prefix has been added to names of all timestamp fields

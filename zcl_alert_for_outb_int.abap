@@ -38,7 +38,9 @@ class zcl_alert_for_outb_int implementation.
       lv_param_name               type abap_parmname,
       lv_param_value              type string,
       ptab                        type abap_parmbind_tab,
-      lv_custom_fields_count      type int4.
+      lv_custom_fields_count      type int4,
+      lt_metrics_data             type zalroutint_tt_metrics,
+      lr_metrics_data             type ref to data.
 
     field-symbols: <fs_structure>          type any,
                    <fs_value>              type any,
@@ -55,7 +57,7 @@ class zcl_alert_for_outb_int implementation.
     lo_structure_desc   ?= cl_abap_structdescr=>describe_by_data_ref( lr_structure_ref ).
     lt_structure_components = lo_structure_desc->get_components( ).
 
-    " Adding extra custom fields to structure
+    " Adding extra custom fields to output JSON structure
 
     lv_custom_fields_count = lines( mt_json_custom_fields ).
 
@@ -69,6 +71,14 @@ class zcl_alert_for_outb_int implementation.
 
     clear ls_component.
 
+    " Adding metrics data structure to output JSON structure
+
+    ls_component-name = 'metrics_data'.
+    ls_component-type = cast #( cl_abap_elemdescr=>describe_by_name( 'ZALROUTINT_TT_METRICS' ) ).
+    append ls_component to lt_structure_components.
+
+    " Updating output JSON structure with added components
+
     lo_updated_structure = cl_abap_structdescr=>create( lt_structure_components ).
 
     create data lr_updated_structure    type handle lo_updated_structure.
@@ -78,9 +88,9 @@ class zcl_alert_for_outb_int implementation.
 
     loop at lt_structure_components assigning field-symbol(<ls_component>).
 
-      " Skipping custom fields in the end of the structure to avoid dynamic method call execution dump
+      " Skipping custom fields and metrics data in the end of the structure to avoid dynamic method call execution dump
 
-      if sy-tabix ge ( lines( lt_structure_components ) - lv_custom_fields_count + 1 ).
+      if sy-tabix ge ( lines( lt_structure_components ) - lv_custom_fields_count + 2 ).
 
         exit.
 
@@ -98,6 +108,8 @@ class zcl_alert_for_outb_int implementation.
 
       lv_param_name = |RP_| && |{ <ls_component>-name }|.
 
+      clear lv_param_value.
+
       ptab = value #( ( name = lv_param_name
           value = ref #( lv_param_value )
            kind = cl_abap_objectdescr=>returning
@@ -109,6 +121,8 @@ class zcl_alert_for_outb_int implementation.
           call method me->(lv_method_name)
             parameter-table
             ptab.
+
+          condense lv_param_value.
 
           assign lv_param_value to <fs_value>.
 
@@ -144,7 +158,26 @@ class zcl_alert_for_outb_int implementation.
 
     endloop. " loop at mt_json_custom_fields assigning <ls_custom_json_fields>
 
-    " Preparing JSON string
+
+    " Filling metrics data structure
+
+    lt_metrics_data = me->zif_alert_base~get_metrics_data(  ).
+
+    assign component 'metrics_data' of structure <fs_structure> to <fs_field>.
+
+    if <fs_value> is assigned.
+      unassign <fs_value>.
+    endif.
+
+    create data lr_metrics_data type zalroutint_tt_metrics.
+
+    assign lr_metrics_data->* to <fs_value>.
+
+    <fs_value> = lt_metrics_data.
+
+    <fs_field> = <fs_value>.
+
+    " Preparing output JSON string from output JSON structure
 
     create object lr_json_serializer
       exporting

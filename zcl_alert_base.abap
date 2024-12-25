@@ -39,7 +39,7 @@ class zcl_alert_base definition
         managed_object_id   type string,
         category            type string,
         severity            type string,
-        timestamp           type string,
+        utc_timestamp       type string,
         rating              type string,
         status              type string,
         guid                type string,
@@ -47,7 +47,7 @@ class zcl_alert_base definition
         description         type string,
         custom_description  type string,
         technical_scenario  type string,
-        metrics_data        type string,
+        epoch_utc_timestamp     type string,
       end of ty_alert_serialized_to_json .
 
     data:
@@ -87,12 +87,11 @@ class zcl_alert_base definition
           !ipv_alert_id  type string
           !ipv_parent_id type string ,
 
-      format_param_value_line
+      convert_timestamp_to_epoch
         importing
-          !ip_parameter type string
-          !ip_value     type string
-        changing
-          !cp_text      type string .
+          ip_timestamp              type timestamp
+        returning
+          value(rp_epoch_timestamp) type string.
 
 endclass.
 
@@ -170,16 +169,11 @@ class zcl_alert_base implementation.
 
         endif. " if <lfs_alert>->has_sub_objects( ) = abap_true
 
-        " Setting enhanced description
-
-        set_enhanced_description( ).
-
       endif. " IF lv_object_type = 'A'
 
     endloop. " loop at it_alert assigning FIELD-SYMBOL(<lfs_alert>)
 
   endmethod.
-
 
   method set_category_text.
 
@@ -391,6 +385,36 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+  method zif_alert_base~get_metrics_data.
+
+
+    data: wa_metric           type zalroutint_ts_metric,
+          lv_timestamp_tstamp type timestamp.
+
+
+
+    loop at mt_events assigning field-symbol(<fs_event>)
+        where obj_type eq 'M'.
+
+      wa_metric-name = <fs_event>-name.
+      wa_metric-rating = <fs_event>-rating.
+      wa_metric-text = <fs_event>-text.
+      wa_metric-utc_timestamp = <fs_event>-timestamp.
+      wa_metric-value = <fs_event>-value.
+
+      lv_timestamp_tstamp = <fs_event>-timestamp.
+      wa_metric-epoch_utc_timestamp = me->convert_timestamp_to_epoch( lv_timestamp_tstamp ).
+
+      condense: wa_metric-name, wa_metric-rating, wa_metric-text,
+        wa_metric-utc_timestamp, wa_metric-value, wa_metric-epoch_utc_timestamp.
+
+      append wa_metric to rt_metrics_data.
+
+    endloop.
+
+  endmethod.
+
+
   method zif_alert_base~get_name.
 
     rp_name = mv_name.
@@ -433,81 +457,44 @@ class zcl_alert_base implementation.
   endmethod.
 
 
-  method zif_alert_base~get_timestamp.
+  method zif_alert_base~get_utc_timestamp.
 
-    rp_timestamp = mv_timestamp.
+    rp_utc_timestamp = mv_timestamp.
 
   endmethod.
 
+  method zif_alert_base~get_epoch_utc_timestamp.
 
-  method zif_alert_base~get_metrics_data.
+    data: lv_timestamp_string type string,
+          lv_timestamp_tstamp type timestamp.
 
-    constants:
-      c_newline value cl_abap_char_utilities=>newline.
+    lv_timestamp_string = me->zif_alert_base~get_utc_timestamp( ).
+
+    lv_timestamp_tstamp = lv_timestamp_string.
+
+    rp_epoch_utc_timestamp = me->convert_timestamp_to_epoch( lv_timestamp_tstamp ).
+
+  endmethod.
+
+  method convert_timestamp_to_epoch.
 
     data:
-      lv_metric_counter type int4.
+      lv_date type datum,
+      lv_time type uzeit.
 
-    loop at mt_events assigning field-symbol(<fs_event>)
-        where obj_type eq 'M'.
+    convert time stamp ip_timestamp time zone 'UTC'
+        into date lv_date time lv_time.
 
-      lv_metric_counter = lv_metric_counter + 1.
+    cl_pco_utility=>convert_abap_timestamp_to_java(
+       exporting
 
-      rp_metrics_data = |{ rp_metrics_data }| && |{ c_newline }| && |{ c_newline }| && |Metric| && | | && |{ lv_metric_counter }| && | | && |Data| && |{ c_newline }|.
+    iv_date      = lv_date
+          iv_time      = lv_time
 
-      format_param_value_line(
-         exporting
-           ip_parameter = 'Name'
-           ip_value = <fs_event>-name
-         changing
-          cp_text = rp_metrics_data ).
+              importing
+              ev_timestamp = rp_epoch_timestamp
 
-      format_param_value_line(
-        exporting
-         ip_parameter = 'Rating'
-         ip_value = <fs_event>-rating
-        changing
-        cp_text = rp_metrics_data ).
-
-      format_param_value_line(
-        exporting
-         ip_parameter = 'Value'
-         ip_value = <fs_event>-value
-        changing
-        cp_text = rp_metrics_data ).
-
-      format_param_value_line(
-        exporting
-         ip_parameter = 'Timestamp'
-         ip_value = <fs_event>-timestamp
-        changing
-        cp_text = rp_metrics_data ).
-
-      format_param_value_line(
-        exporting
-         ip_parameter = 'Text'
-         ip_value = <fs_event>-text
-        changing
-        cp_text = rp_metrics_data ).
-
-    endloop.
-
-  endmethod.
-
-  method format_param_value_line.
-
-    data: lv_comment_line_left  type string,
-          lv_comment_line_right type string,
-          c_newline             value cl_abap_char_utilities=>newline.
-
-    lv_comment_line_left = ip_parameter.
-
-    lv_comment_line_left = cl_alert_consm_utility=>get_formatted_label( lv_comment_line_left ).
-
-    lv_comment_line_right = |{ lv_comment_line_left }| && |{ ip_value }|.
-
-    cp_text = |{ cp_text }| && |{ c_newline }| && |{ lv_comment_line_right }|.
-
+      ).
 
   endmethod.
 

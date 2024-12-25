@@ -123,7 +123,7 @@ CLASS ZCL_ALERTS_OUTB_INT_HSTRY IMPLEMENTATION.
     ms_history_record-payload = mv_alert_payload.
     ms_history_record-record_guid = lv_sysuuid_x16_guid.
     ms_history_record-technical_scenario = mo_alert->get_technical_scenario( ).
-    ms_history_record-timestamp = mo_alert->get_timestamp(  ).
+    ms_history_record-utc_timestamp = mo_alert->get_utc_timestamp(  ).
 
     if ( mv_log_record_text is not initial ).
       ms_history_record-error_text = mv_log_record_text.

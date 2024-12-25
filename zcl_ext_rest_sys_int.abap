@@ -24,14 +24,6 @@ class zcl_ext_rest_sys_int definition
         raising
           cx_abap_message_digest,
 
-      get_setup_parameter
-        importing
-          !ip_param_name  type char50
-        returning
-          value(ep_value) type text100
-        raising
-          zcx_ext_rest_sys_exc ,
-
       set_heartbeat_payload
         raising
           zcx_ext_rest_sys_exc.
@@ -55,7 +47,8 @@ class zcl_ext_rest_sys_int definition
       mo_http_client               type ref to if_http_client,
       mo_rest_client               type ref to cl_rest_http_client,
       mo_request                   type ref to if_rest_entity,
-      mo_rest_client_response      type ref to if_rest_entity.
+      mo_rest_client_response      type ref to if_rest_entity,
+      mo_ext_rest_sys_conf         type ref to zif_ext_rest_sys_conf.
 
     methods:
 
@@ -104,6 +97,10 @@ class zcl_ext_rest_sys_int implementation.
     " System name
 
     mv_ext_rest_system_name = ip_ext_rest_system_name.
+
+    " Setting configuration
+
+    mo_ext_rest_sys_conf = new zcl_ext_rest_sys_conf( ip_ext_rest_system_name ).
 
     " Runtime parameters
 
@@ -212,37 +209,6 @@ class zcl_ext_rest_sys_int implementation.
     rp_http_status_code  = mo_rest_client_response->get_header_field( '~response_line' ).
 
   endmethod.
-
-
-  method get_setup_parameter.
-
-    data:
-      lv_param_name   type char50,
-      lv_text_token_1 type string,
-      lv_text_token_2 type string.
-
-    lv_param_name = |{ mv_ext_rest_system_name }| && |.| && |{ ip_param_name }|.
-
-    select single value from zextrstsys_setup
-     into ep_value
-       where param eq lv_param_name.
-
-    if sy-subrc ne 0.
-
-      lv_text_token_1  = lv_param_name.
-      lv_text_token_2  = mv_ext_rest_system_name.
-
-      raise exception type zcx_ext_rest_sys_exc
-        exporting
-          textid          = zcx_ext_rest_sys_exc=>ext_sys_param_not_found
-          ip_text_token_1 = lv_text_token_1
-          ip_text_token_2 = lv_text_token_2.
-
-
-    endif. " if sy-subrc ne 0
-
-  endmethod.
-
 
   method prepare_request_headers.
 
@@ -379,12 +345,12 @@ class zcl_ext_rest_sys_int implementation.
 
   method set_runtime_parameters.
 
-    mv_rest_api_rfc_dest_name = get_setup_parameter( 'REST_API_RFC_DEST_NAME' ).
-    mv_ai_app_log_object = get_setup_parameter( 'APP_LOG_OBJECT' ).
-    mv_ai_app_log_subobject = get_setup_parameter( 'APP_LOG_SUBOBJECT' ).
-    mv_rfc_dest_path_prefix = get_setup_parameter( 'RFC_DEST_PATH_PREFIX' ).
+    mv_rest_api_rfc_dest_name = mo_ext_rest_sys_conf->get_parameter_value( 'REST_API_RFC_DEST_NAME' ).
+    mv_ai_app_log_object = mo_ext_rest_sys_conf->get_parameter_value( 'APP_LOG_OBJECT' ).
+    mv_ai_app_log_subobject = mo_ext_rest_sys_conf->get_parameter_value( 'APP_LOG_SUBOBJECT' ).
+    mv_rfc_dest_path_prefix = mo_ext_rest_sys_conf->get_parameter_value( 'RFC_DEST_PATH_PREFIX' ).
 
-    mv_hb_active = get_setup_parameter( 'HEARTBEAT.ACTIVE' ).
+    mv_hb_active = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.ACTIVE' ).
 
     if ( mv_hb_active eq abap_true ).
 
@@ -397,11 +363,11 @@ class zcl_ext_rest_sys_int implementation.
 
   method set_hb_runtime_parameters.
 
-    mv_hb_rest_api_rfc_dest_name = get_setup_parameter( 'HEARTBEAT.REST_API_RFC_DEST_NAME' ).
-    mv_hb_rfc_dest_path_prefix = get_setup_parameter( 'HEARTBEAT.RFC_DEST_PATH_PREFIX' ).
-    mv_hb_method = get_setup_parameter( 'HEARTBEAT.METHOD' ).
-    mv_hb_app_log_object = get_setup_parameter( 'HEARTBEAT.APP_LOG_OBJECT' ).
-    mv_hb_app_log_subobject = get_setup_parameter( 'HEARTBEAT.APP_LOG_SUBOBJECT' ).
+    mv_hb_rest_api_rfc_dest_name = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.REST_API_RFC_DEST_NAME' ).
+    mv_hb_rfc_dest_path_prefix = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.RFC_DEST_PATH_PREFIX' ).
+    mv_hb_method = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.METHOD' ).
+    mv_hb_app_log_object = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.APP_LOG_OBJECT' ).
+    mv_hb_app_log_subobject = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.APP_LOG_SUBOBJECT' ).
 
   endmethod.
 
@@ -453,7 +419,7 @@ class zcl_ext_rest_sys_int implementation.
 
       set_request_headers( ).
 
-      "execute_post( ).
+      "  execute_post( ).
 
       set_rest_client_response( ).
 
