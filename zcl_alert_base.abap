@@ -47,7 +47,7 @@ class zcl_alert_base definition
         description         type string,
         custom_description  type string,
         technical_scenario  type string,
-        epoch_utc_timestamp     type string,
+        epoch_utc_timestamp type string,
       end of ty_alert_serialized_to_json .
 
     data:
@@ -93,13 +93,18 @@ class zcl_alert_base definition
         returning
           value(rp_epoch_timestamp) type string.
 
-endclass.
+ENDCLASS.
 
 
 
-class zcl_alert_base implementation.
+CLASS ZCL_ALERT_BASE IMPLEMENTATION.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->CONSTRUCTOR
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IT_ALERT                       TYPE        E2EA_T_ALERT_CONSM_OBJECT
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method constructor.
 
     data: lv_object_type type char10,
@@ -175,6 +180,40 @@ class zcl_alert_base implementation.
 
   endmethod.
 
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_ALERT_BASE->CONVERT_TIMESTAMP_TO_EPOCH
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IP_TIMESTAMP                   TYPE        TIMESTAMP
+* | [<-()] RP_EPOCH_TIMESTAMP             TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method convert_timestamp_to_epoch.
+
+    data:
+      lv_date type datum,
+      lv_time type uzeit.
+
+    convert time stamp ip_timestamp time zone 'UTC'
+        into date lv_date time lv_time.
+
+    cl_pco_utility=>convert_abap_timestamp_to_java(
+       exporting
+
+    iv_date      = lv_date
+          iv_time      = lv_time
+
+              importing
+              ev_timestamp = rp_epoch_timestamp
+
+      ).
+
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_ALERT_BASE->SET_CATEGORY_TEXT
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_category_text.
 
     data lv_category type string.
@@ -188,6 +227,10 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_ALERT_BASE->SET_STATUS_TEXT
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_status_text.
 
     mv_status_text = cl_alert_consm_utility=>get_domain_value_text(
@@ -197,6 +240,13 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_ALERT_BASE->SET_SUB_OBJECTS
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IPO_OBJECT                     TYPE REF TO IF_ALERT_CONSM_OBJECT
+* | [--->] IPV_ALERT_ID                   TYPE        STRING
+* | [--->] IPV_PARENT_ID                  TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_sub_objects.
 
     data:
@@ -260,6 +310,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_ALERT_SERIALIZED_IN_JSON
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_ALERT_SERIALIZED_IN_JSON    TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_alert_serialized_in_json.
 
     data:
@@ -336,6 +391,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_CATEGORY
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_CATEGORY                    TYPE        AC_CATEGORY
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_category.
 
     rp_category = mv_category.
@@ -343,6 +403,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_CUSTOM_DESCRIPTION
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_CUSTOM_DESCRIPTION          TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_custom_description.
 
     rp_custom_description = mv_custom_description.
@@ -350,6 +415,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_DESCRIPTION
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_DESCRIPTION                 TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_description.
 
     rp_description = mv_description.
@@ -357,6 +427,84 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_EPOCH_UTC_TIMESTAMP
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_EPOCH_UTC_TIMESTAMP         TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method zif_alert_base~get_epoch_utc_timestamp.
+
+    data: lv_timestamp_string type string,
+          lv_timestamp_tstamp type timestamp.
+
+    lv_timestamp_string = me->zif_alert_base~get_utc_timestamp( ).
+
+    lv_timestamp_tstamp = lv_timestamp_string.
+
+    rp_epoch_utc_timestamp = me->convert_timestamp_to_epoch( lv_timestamp_tstamp ).
+
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_FIRST_NON_GREEN_METRIC
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RS_METRIC                      TYPE        ZALROUTINT_TS_METRIC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method zif_alert_base~get_first_non_green_metric.
+
+    data:
+      lv_green_rating_text type string,
+      lv_gray_rating_text  type string,
+      lv_timestamp_tstamp  type timestamp.
+
+*    Constants of E2EA_RATING
+*
+*    0  Grey
+*    1  Green
+*    2  Yellow
+*    3  Red
+
+    lv_green_rating_text = cl_alert_consm_utility=>get_domain_value_text(
+       i_domain_name = cl_alert_consm_constants=>ac_domname_rating
+       i_value = '1'
+       ).
+
+    lv_gray_rating_text = cl_alert_consm_utility=>get_domain_value_text(
+       i_domain_name = cl_alert_consm_constants=>ac_domname_rating
+       i_value = '0'
+       ).
+
+    loop at mt_events assigning field-symbol(<fs_event>)
+        where obj_type eq 'M'.
+
+      if ( <fs_event>-rating ne lv_green_rating_text ) and
+        ( <fs_event>-rating ne lv_gray_rating_text ).
+
+        rs_metric-name = <fs_event>-name.
+        rs_metric-rating = <fs_event>-rating.
+        rs_metric-text = <fs_event>-text.
+        rs_metric-utc_timestamp = <fs_event>-timestamp.
+        rs_metric-value = <fs_event>-value.
+
+        lv_timestamp_tstamp = <fs_event>-timestamp.
+        rs_metric-epoch_utc_timestamp = me->convert_timestamp_to_epoch( lv_timestamp_tstamp ).
+
+        exit.
+
+      endif.
+
+    endloop.
+
+
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_GUID
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_GUID                        TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_guid.
 
     rp_guid = mv_guid.
@@ -364,6 +512,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_MANAGED_OBJECT_ID
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_MANAGED_OBJECT_ID           TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_managed_object_id.
 
     rp_managed_object_id = mv_managed_object_id.
@@ -371,6 +524,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_MANAGED_OBJECT_NAME
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_MANAGED_OBJECT_NAME         TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_managed_object_name.
 
     rp_managed_object_name = mv_managed_object_name.
@@ -378,6 +536,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_MANAGED_OBJECT_TYPE
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_MANAGED_OBJECT_TYPE         TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_managed_object_type.
 
     rp_managed_object_type = mv_managed_object_type.
@@ -385,6 +548,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_METRICS_DATA
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RT_METRICS_DATA                TYPE        ZALROUTINT_TT_METRICS
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_metrics_data.
 
 
@@ -415,6 +583,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_NAME
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_NAME                        TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_name.
 
     rp_name = mv_name.
@@ -422,6 +595,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_RATING
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_RATING                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_rating.
 
     rp_rating = mv_rating.
@@ -429,6 +607,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_SEVERITY
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_SEVERITY                    TYPE        AC_SEVERITY
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_severity.
 
     rp_severity = mv_severity.
@@ -436,6 +619,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_STATUS
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_STATUS                      TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_status.
 
     rp_status = mv_status.
@@ -443,6 +631,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_TECHNICAL_NAME
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_TECHNICAL_NAME              TYPE        AC_NAME
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_technical_name.
 
     rp_technical_name = mv_technical_name.
@@ -450,6 +643,11 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_TECHNICAL_SCENARIO
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_TECHNICAL_SCENARIO          TYPE        AC_TECHNICAL_SCENARIO
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_technical_scenario.
 
     rp_technical_scenario = mv_technical_scenario.
@@ -457,45 +655,14 @@ class zcl_alert_base implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_BASE->ZIF_ALERT_BASE~GET_UTC_TIMESTAMP
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_UTC_TIMESTAMP               TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_utc_timestamp.
 
     rp_utc_timestamp = mv_timestamp.
 
   endmethod.
-
-  method zif_alert_base~get_epoch_utc_timestamp.
-
-    data: lv_timestamp_string type string,
-          lv_timestamp_tstamp type timestamp.
-
-    lv_timestamp_string = me->zif_alert_base~get_utc_timestamp( ).
-
-    lv_timestamp_tstamp = lv_timestamp_string.
-
-    rp_epoch_utc_timestamp = me->convert_timestamp_to_epoch( lv_timestamp_tstamp ).
-
-  endmethod.
-
-  method convert_timestamp_to_epoch.
-
-    data:
-      lv_date type datum,
-      lv_time type uzeit.
-
-    convert time stamp ip_timestamp time zone 'UTC'
-        into date lv_date time lv_time.
-
-    cl_pco_utility=>convert_abap_timestamp_to_java(
-       exporting
-
-    iv_date      = lv_date
-          iv_time      = lv_time
-
-              importing
-              ev_timestamp = rp_epoch_timestamp
-
-      ).
-
-  endmethod.
-
-endclass.
+ENDCLASS.

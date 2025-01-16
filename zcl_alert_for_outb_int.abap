@@ -14,13 +14,46 @@ class zcl_alert_for_outb_int definition
 
     data mt_json_custom_fields type zalroutint_tt_custom_json_flds .
 
-endclass.
+    methods:
+      get_ke_path
+        importing
+          ip_sid                 type ac_string
+          ip_ke                  type zesm_ke
+          ip_technical_scenario  type ac_technical_scenario
+          ip_managed_object_name type string
+          ip_metric_name         type string
+        returning
+          value(rp_ke_path)      type string.
+
+ENDCLASS.
 
 
 
-class zcl_alert_for_outb_int implementation.
+CLASS ZCL_ALERT_FOR_OUTB_INT IMPLEMENTATION.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_ALERT_FOR_OUTB_INT->GET_KE_PATH
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IP_SID                         TYPE        AC_STRING
+* | [--->] IP_KE                          TYPE        ZESM_KE
+* | [--->] IP_TECHNICAL_SCENARIO          TYPE        AC_TECHNICAL_SCENARIO
+* | [--->] IP_MANAGED_OBJECT_NAME         TYPE        STRING
+* | [--->] IP_METRIC_NAME                 TYPE        STRING
+* | [<-()] RP_KE_PATH                     TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method get_ke_path.
+
+    rp_ke_path = |{ ip_ke }| && |/| && |{ ip_sid }| && |/| && |{ ip_technical_scenario }| && |/| && |{ ip_managed_object_name }| && |/| && |{ ip_metric_name }| .
+
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_FOR_OUTB_INT->ZIF_ALERT_BASE~GET_ALERT_SERIALIZED_IN_JSON
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_ALERT_SERIALIZED_IN_JSON    TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_base~get_alert_serialized_in_json.
 
     data:
@@ -40,7 +73,15 @@ class zcl_alert_for_outb_int implementation.
       ptab                        type abap_parmbind_tab,
       lv_custom_fields_count      type int4,
       lt_metrics_data             type zalroutint_tt_metrics,
-      lr_metrics_data             type ref to data.
+      lr_metrics_data             type ref to data,
+      lr_sid                      type ref to data,
+      lr_ke_path                  type ref to data,
+      lr_ke                       type ref to data,
+      lv_ke                       type zesm_ke,
+      lv_sid                      type string,
+      lo_ci_mgr                   type ref to zif_alert_ci_mgr,
+      lv_class_name               type ddobjname,
+      lv_context_id               type ac_guid.
 
     field-symbols: <fs_structure>          type any,
                    <fs_value>              type any,
@@ -75,6 +116,24 @@ class zcl_alert_for_outb_int implementation.
 
     ls_component-name = 'metrics_data'.
     ls_component-type = cast #( cl_abap_elemdescr=>describe_by_name( 'ZALROUTINT_TT_METRICS' ) ).
+    append ls_component to lt_structure_components.
+
+    " Adding SID data structure to output JSON structure
+
+    ls_component-name = 'sid'.
+    ls_component-type = cl_abap_elemdescr=>get_string( ).
+    append ls_component to lt_structure_components.
+
+    " Adding KE data structure to output JSON structure
+
+    ls_component-name = 'ke'.
+    ls_component-type = cast #( cl_abap_elemdescr=>describe_by_name( 'ZESM_KE' ) ).
+    append ls_component to lt_structure_components.
+
+    " Adding KE path to output JSON structure
+
+    ls_component-name = 'ke_path'.
+    ls_component-type = cl_abap_elemdescr=>get_string( ).
     append ls_component to lt_structure_components.
 
     " Updating output JSON structure with added components
@@ -158,7 +217,6 @@ class zcl_alert_for_outb_int implementation.
 
     endloop. " loop at mt_json_custom_fields assigning <ls_custom_json_fields>
 
-
     " Filling metrics data structure
 
     lt_metrics_data = me->zif_alert_base~get_metrics_data(  ).
@@ -177,6 +235,90 @@ class zcl_alert_for_outb_int implementation.
 
     <fs_field> = <fs_value>.
 
+    " Filling SID data field
+
+    lv_context_id = me->zif_alert_base~get_managed_object_id( ).
+
+    assign component 'sid' of structure <fs_structure> to <fs_field>.
+
+    if <fs_value> is assigned.
+      unassign <fs_value>.
+    endif.
+
+    create data lr_sid type string.
+
+    assign lr_sid->* to <fs_value>.
+
+    lv_class_name = |ZCL_| && |{ me->zif_alert_base~get_technical_scenario( ) }| && |_CI_MGR|.
+
+    try.
+        create object lo_ci_mgr type (lv_class_name)
+         exporting
+           ip_context_id = lv_context_id.
+
+
+        lv_sid = lo_ci_mgr->get_alert_sid( ).
+
+        <fs_value> = lv_sid.
+
+      catch cx_sy_dyn_call_error cx_sy_create_object_error into data(lcx_sid_search_class_exception).
+
+        lv_exception_text = lcx_process_exception->get_longtext( ).
+
+    endtry.
+
+    <fs_field> = <fs_value>.
+
+
+    " Filling KE data field
+
+    assign component 'ke' of structure <fs_structure> to <fs_field>.
+
+    if <fs_value> is assigned.
+      unassign <fs_value>.
+    endif.
+
+    create data lr_ke type zesm_ke.
+
+    assign lr_ke->* to <fs_value>.
+
+    try.
+
+        lv_ke = lo_ci_mgr->get_ke_by_alert_sid( ).
+
+        <fs_value> = lv_ke.
+
+      catch cx_sy_dyn_call_error cx_sy_create_object_error into data(lcx_ke_search_class_exception).
+
+        lv_exception_text = lcx_process_exception->get_longtext( ).
+
+    endtry.
+
+    <fs_field> = <fs_value>.
+
+    " Filling KE path data field
+
+    assign component 'ke_path' of structure <fs_structure> to <fs_field>.
+
+    if <fs_value> is assigned.
+      unassign <fs_value>.
+    endif.
+
+    create data lr_ke_path type string.
+
+    assign lr_ke_path->* to <fs_value>.
+
+    <fs_value> = me->get_ke_path(
+      ip_ke = lv_ke
+       ip_sid = lv_sid
+       ip_managed_object_name = me->zif_alert_base~get_managed_object_name( )
+       ip_technical_scenario = me->zif_alert_base~get_technical_scenario( )
+       ip_metric_name = me->zif_alert_base~get_first_non_green_metric( )-name
+
+    ).
+
+    <fs_field> = <fs_value>.
+
     " Preparing output JSON string from output JSON structure
 
     create object lr_json_serializer
@@ -190,9 +332,14 @@ class zcl_alert_for_outb_int implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_ALERT_FOR_OUTB_INT->ZIF_ALERT_FOR_OUTB_INT~SET_CUSTOM_PAYLOAD_FIELDS
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IT_CUSTOM_JSON_FIELDS          TYPE        ZALROUTINT_TT_CUSTOM_JSON_FLDS
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_alert_for_outb_int~set_custom_payload_fields.
 
     move-corresponding it_custom_json_fields to mt_json_custom_fields.
 
   endmethod.
-endclass.
+ENDCLASS.

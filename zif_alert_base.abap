@@ -61,13 +61,17 @@ interface zif_alert_base
     get_technical_name
       returning
         value(rp_technical_name) type ac_name,
+
     get_metrics_data
       returning
         value(rt_metrics_data) type zalroutint_tt_metrics,
 
     get_epoch_utc_timestamp
       returning
-        value(rp_epoch_utc_timestamp) type string.
+        value(rp_epoch_utc_timestamp) type string,
 
+    get_first_non_green_metric
+      returning
+        value(rs_metric) type zalroutint_ts_metric.
 
 endinterface.

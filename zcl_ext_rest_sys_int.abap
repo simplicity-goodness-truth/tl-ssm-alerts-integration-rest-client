@@ -85,13 +85,20 @@ class zcl_ext_rest_sys_int definition
       set_rest_client,
 
       set_rest_client_response .
-endclass.
+ENDCLASS.
 
 
 
-class zcl_ext_rest_sys_int implementation.
+CLASS ZCL_EXT_REST_SYS_INT IMPLEMENTATION.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_EXT_REST_SYS_INT->CONSTRUCTOR
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IP_EXT_REST_SYSTEM_NAME        TYPE        AC_REACTION_ID
+* | [--->] IP_EXT_REST_SYSTEM_MODE        TYPE        CHAR10(optional)
+* | [!CX!] ZCX_EXT_REST_SYS_EXC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method constructor.
 
     " System name
@@ -145,35 +152,11 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
-  method execute_post.
-
-    data:
-      lv_log_record_text       type string,
-      lv_http_client_exception type string.
-
-    " Executing HTTP POST
-
-    try.
-
-        mo_rest_client->if_rest_client~post( mo_request ).
-
-      catch cx_rest_client_exception into data(lo_rest_client_error) .
-
-        lv_http_client_exception = lo_rest_client_error->get_text( ).
-
-        raise exception type zcx_ext_rest_sys_exc
-          exporting
-            textid          = zcx_ext_rest_sys_exc=>cannot_execute_post_method
-            ip_text_token_1 = lv_http_client_exception.
-
-    endtry.
-
-    lv_log_record_text = |POST request executed|.
-
-    mo_log->info( lv_log_record_text ).
-
-  endmethod.
-
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->EXECUTE_GET
+* +-------------------------------------------------------------------------------------------------+
+* | [!CX!] ZCX_EXT_REST_SYS_EXC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method execute_get.
 
     data:
@@ -204,18 +187,96 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->EXECUTE_POST
+* +-------------------------------------------------------------------------------------------------+
+* | [!CX!] ZCX_EXT_REST_SYS_EXC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method execute_post.
+
+    data:
+      lv_log_record_text       type string,
+      lv_http_client_exception type string.
+
+    " Executing HTTP POST
+
+    try.
+
+        mo_rest_client->if_rest_client~post( mo_request ).
+
+      catch cx_rest_client_exception into data(lo_rest_client_error) .
+
+        lv_http_client_exception = lo_rest_client_error->get_text( ).
+
+        raise exception type zcx_ext_rest_sys_exc
+          exporting
+            textid          = zcx_ext_rest_sys_exc=>cannot_execute_post_method
+            ip_text_token_1 = lv_http_client_exception.
+
+    endtry.
+
+    lv_log_record_text = |POST request executed|.
+
+    mo_log->info( lv_log_record_text ).
+
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->GET_REST_CLIENT_RESPONSE_CODE
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_HTTP_STATUS_CODE            TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method get_rest_client_response_code.
 
     rp_http_status_code  = mo_rest_client_response->get_header_field( '~response_line' ).
 
   endmethod.
 
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Protected Method ZCL_EXT_REST_SYS_INT->PREPARE_REQUEST_HEADERS
+* +-------------------------------------------------------------------------------------------------+
+* | [!CX!] CX_ABAP_MESSAGE_DIGEST
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method prepare_request_headers.
 
 
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->SET_HB_RUNTIME_PARAMETERS
+* +-------------------------------------------------------------------------------------------------+
+* | [!CX!] ZCX_EXT_REST_SYS_EXC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method set_hb_runtime_parameters.
+
+    mv_hb_rest_api_rfc_dest_name = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.REST_API_RFC_DEST_NAME' ).
+    mv_hb_rfc_dest_path_prefix = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.RFC_DEST_PATH_PREFIX' ).
+    mv_hb_method = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.METHOD' ).
+    mv_hb_app_log_object = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.APP_LOG_OBJECT' ).
+    mv_hb_app_log_subobject = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.APP_LOG_SUBOBJECT' ).
+
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Protected Method ZCL_EXT_REST_SYS_INT->SET_HEARTBEAT_PAYLOAD
+* +-------------------------------------------------------------------------------------------------+
+* | [!CX!] ZCX_EXT_REST_SYS_EXC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method set_heartbeat_payload.
+
+
+  endmethod.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->SET_HTTP_CLIENT
+* +-------------------------------------------------------------------------------------------------+
+* | [!CX!] ZCX_EXT_REST_SYS_EXC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_http_client.
 
     data:
@@ -272,6 +333,10 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->SET_REQUEST
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_request.
 
     mo_request = mo_rest_client->if_rest_client~create_request_entity( ).
@@ -283,6 +348,10 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->SET_REQUEST_HEADERS
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_request_headers.
 
     data lv_log_record_text type string.
@@ -312,6 +381,10 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->SET_REQUEST_URI
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_request_uri.
 
     cl_http_utility=>set_request_uri(
@@ -323,6 +396,10 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->SET_REST_CLIENT
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_rest_client.
 
     " Create REST client instance
@@ -336,6 +413,10 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->SET_REST_CLIENT_RESPONSE
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_rest_client_response.
 
     mo_rest_client_response = mo_rest_client->if_rest_client~get_response_entity( ).
@@ -343,6 +424,11 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Private Method ZCL_EXT_REST_SYS_INT->SET_RUNTIME_PARAMETERS
+* +-------------------------------------------------------------------------------------------------+
+* | [!CX!] ZCX_EXT_REST_SYS_EXC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method set_runtime_parameters.
 
     mv_rest_api_rfc_dest_name = mo_ext_rest_sys_conf->get_parameter_value( 'REST_API_RFC_DEST_NAME' ).
@@ -361,16 +447,11 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
-  method set_hb_runtime_parameters.
-
-    mv_hb_rest_api_rfc_dest_name = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.REST_API_RFC_DEST_NAME' ).
-    mv_hb_rfc_dest_path_prefix = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.RFC_DEST_PATH_PREFIX' ).
-    mv_hb_method = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.METHOD' ).
-    mv_hb_app_log_object = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.APP_LOG_OBJECT' ).
-    mv_hb_app_log_subobject = mo_ext_rest_sys_conf->get_parameter_value( 'HEARTBEAT.APP_LOG_SUBOBJECT' ).
-
-  endmethod.
-
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_EXT_REST_SYS_INT->ZIF_EXT_REST_SYS_INT~GET_RESPONSE_STRING
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RP_RESPONSE_STRING             TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_ext_rest_sys_int~get_response_string.
 
     data: lv_http_status   type string,
@@ -385,63 +466,11 @@ class zcl_ext_rest_sys_int implementation.
   endmethod.
 
 
-  method zif_ext_rest_sys_int~send_payload_json_as_post_req.
-
-    data:
-      lv_log_record_text type string,
-      lv_http_status     type string.
-
-    lv_log_record_text = |System| && | | && |{ mv_ext_rest_system_name }| && |: sending payload via REST API POST request|.
-
-    mo_log->info( lv_log_record_text ).
-
-    lv_log_record_text = |Payload: | && | | && |{ mv_rest_api_payload_json }|.
-
-    mo_log->info( lv_log_record_text ).
-
-    lv_log_record_text = |RFC destination:| && | | && |{ mv_rest_api_rfc_dest_name }|.
-
-    mo_log->info( lv_log_record_text ).
-
-    lv_log_record_text = |Path prefix: | && | | && |{ mv_rfc_dest_path_prefix }|.
-
-    mo_log->info( lv_log_record_text ).
-
-    set_http_client( ).
-
-    set_rest_client( ).
-
-    if mo_http_client is bound and mo_rest_client is bound.
-
-      set_request_uri( ).
-
-      set_request( ).
-
-      set_request_headers( ).
-
-      "  execute_post( ).
-
-      set_rest_client_response( ).
-
-      lv_http_status = get_rest_client_response_code( ).
-
-      lv_log_record_text = |POST request response :| && | | && |{ lv_http_status }|.
-
-      mo_log->info( lv_log_record_text ).
-
-    endif. " IF lo_http_client IS BOUND AND lo_rest_client IS BOUND
-
-
-
-  endmethod.
-
-
-  method zif_ext_rest_sys_int~set_payload_json.
-
-    mv_rest_api_payload_json = ip_rest_api_payload_json.
-
-  endmethod.
-
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_EXT_REST_SYS_INT->ZIF_EXT_REST_SYS_INT~SEND_HB_PAYLOAD
+* +-------------------------------------------------------------------------------------------------+
+* | [!CX!] ZCX_EXT_REST_SYS_EXC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
   method zif_ext_rest_sys_int~send_hb_payload.
 
     data:
@@ -512,9 +541,71 @@ class zcl_ext_rest_sys_int implementation.
 
   endmethod.
 
-  method set_heartbeat_payload.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_EXT_REST_SYS_INT->ZIF_EXT_REST_SYS_INT~SEND_PAYLOAD_JSON_AS_POST_REQ
+* +-------------------------------------------------------------------------------------------------+
+* | [!CX!] ZCX_EXT_REST_SYS_EXC
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method zif_ext_rest_sys_int~send_payload_json_as_post_req.
+
+    data:
+      lv_log_record_text type string,
+      lv_http_status     type string.
+
+    lv_log_record_text = |System| && | | && |{ mv_ext_rest_system_name }| && |: sending payload via REST API POST request|.
+
+    mo_log->info( lv_log_record_text ).
+
+    lv_log_record_text = |Payload: | && | | && |{ mv_rest_api_payload_json }|.
+
+    mo_log->info( lv_log_record_text ).
+
+    lv_log_record_text = |RFC destination:| && | | && |{ mv_rest_api_rfc_dest_name }|.
+
+    mo_log->info( lv_log_record_text ).
+
+    lv_log_record_text = |Path prefix: | && | | && |{ mv_rfc_dest_path_prefix }|.
+
+    mo_log->info( lv_log_record_text ).
+
+    set_http_client( ).
+
+    set_rest_client( ).
+
+    if mo_http_client is bound and mo_rest_client is bound.
+
+      set_request_uri( ).
+
+      set_request( ).
+
+      set_request_headers( ).
+
+     " execute_post( ).
+
+      set_rest_client_response( ).
+
+      lv_http_status = get_rest_client_response_code( ).
+
+      lv_log_record_text = |POST request response :| && | | && |{ lv_http_status }|.
+
+      mo_log->info( lv_log_record_text ).
+
+    endif. " IF lo_http_client IS BOUND AND lo_rest_client IS BOUND
+
 
 
   endmethod.
 
-endclass.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_EXT_REST_SYS_INT->ZIF_EXT_REST_SYS_INT~SET_PAYLOAD_JSON
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IP_REST_API_PAYLOAD_JSON       TYPE        STRING
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method zif_ext_rest_sys_int~set_payload_json.
+
+    mv_rest_api_payload_json = ip_rest_api_payload_json.
+
+  endmethod.
+ENDCLASS.
