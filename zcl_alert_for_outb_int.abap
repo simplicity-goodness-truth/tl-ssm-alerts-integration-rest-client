@@ -126,13 +126,13 @@ CLASS ZCL_ALERT_FOR_OUTB_INT IMPLEMENTATION.
 
     " Adding KE data structure to output JSON structure
 
-    ls_component-name = 'ke'.
+    ls_component-name = 'ci'.
     ls_component-type = cast #( cl_abap_elemdescr=>describe_by_name( 'ZESM_KE' ) ).
     append ls_component to lt_structure_components.
 
     " Adding KE path to output JSON structure
 
-    ls_component-name = 'ke_path'.
+    ls_component-name = 'ci_path'.
     ls_component-type = cl_abap_elemdescr=>get_string( ).
     append ls_component to lt_structure_components.
 
@@ -256,23 +256,27 @@ CLASS ZCL_ALERT_FOR_OUTB_INT IMPLEMENTATION.
          exporting
            ip_context_id = lv_context_id.
 
-
-        lv_sid = lo_ci_mgr->get_alert_sid( ).
-
-        <fs_value> = lv_sid.
-
-      catch cx_sy_dyn_call_error cx_sy_create_object_error into data(lcx_sid_search_class_exception).
+      catch cx_sy_ref_is_initial cx_sy_dyn_call_error cx_sy_create_object_error into data(lcx_sid_search_class_exception).
 
         lv_exception_text = lcx_process_exception->get_longtext( ).
 
     endtry.
+
+    if lo_ci_mgr is bound.
+
+      lv_sid = lo_ci_mgr->get_alert_sid( ).
+
+      <fs_value> = lv_sid.
+
+    endif.
+
 
     <fs_field> = <fs_value>.
 
 
     " Filling KE data field
 
-    assign component 'ke' of structure <fs_structure> to <fs_field>.
+    assign component 'ci' of structure <fs_structure> to <fs_field>.
 
     if <fs_value> is assigned.
       unassign <fs_value>.
@@ -288,7 +292,7 @@ CLASS ZCL_ALERT_FOR_OUTB_INT IMPLEMENTATION.
 
         <fs_value> = lv_ke.
 
-      catch cx_sy_dyn_call_error cx_sy_create_object_error into data(lcx_ke_search_class_exception).
+      catch cx_sy_ref_is_initial cx_sy_dyn_call_error cx_sy_create_object_error into data(lcx_ke_search_class_exception).
 
         lv_exception_text = lcx_process_exception->get_longtext( ).
 
@@ -298,26 +302,30 @@ CLASS ZCL_ALERT_FOR_OUTB_INT IMPLEMENTATION.
 
     " Filling KE path data field
 
-    assign component 'ke_path' of structure <fs_structure> to <fs_field>.
+    if lv_ke is not initial.
 
-    if <fs_value> is assigned.
-      unassign <fs_value>.
+      assign component 'ci_path' of structure <fs_structure> to <fs_field>.
+
+      if <fs_value> is assigned.
+        unassign <fs_value>.
+      endif.
+
+      create data lr_ke_path type string.
+
+      assign lr_ke_path->* to <fs_value>.
+
+      <fs_value> = me->get_ke_path(
+        ip_ke = lv_ke
+         ip_sid = lv_sid
+         ip_managed_object_name = me->zif_alert_base~get_managed_object_name( )
+         ip_technical_scenario = me->zif_alert_base~get_technical_scenario( )
+         ip_metric_name = me->zif_alert_base~get_first_non_green_metric( )-name
+
+      ).
+
+      <fs_field> = <fs_value>.
+
     endif.
-
-    create data lr_ke_path type string.
-
-    assign lr_ke_path->* to <fs_value>.
-
-    <fs_value> = me->get_ke_path(
-      ip_ke = lv_ke
-       ip_sid = lv_sid
-       ip_managed_object_name = me->zif_alert_base~get_managed_object_name( )
-       ip_technical_scenario = me->zif_alert_base~get_technical_scenario( )
-       ip_metric_name = me->zif_alert_base~get_first_non_green_metric( )-name
-
-    ).
-
-    <fs_field> = <fs_value>.
 
     " Preparing output JSON string from output JSON structure
 
